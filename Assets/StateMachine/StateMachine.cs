@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 namespace Game.Tools {
@@ -22,13 +21,31 @@ public class State {
 	string name;
 	StateMachine stateMachine;
 	
-	EnterState enter;
-	UpdateState update;
-	ExitState exit;
+	protected EnterState enter;
+	protected UpdateState update;
+	protected ExitState exit;
 	
-	List<StateOutput> outputStates = new List<StateOutput>();
+	protected List<StateOutput> outputStates = new List<StateOutput>();
 	
 	bool firstUpdate = true;
+	
+	// -- //
+	
+	protected void Enter() {
+		firstUpdate = false;
+		
+		if(enter != null) {
+			enter();
+		}
+	}
+	
+	protected void Exit() {
+		firstUpdate = true;
+		
+		if(exit != null) {
+			exit();
+		}
+	}
 	
 	// -- //
 	
@@ -56,7 +73,7 @@ public class State {
 		return output.toState;
 	}
 	
-	public State AnyState(string name, Condition switchCondition, EnterState enter = null, UpdateState update = null, ExitState exit = null) {
+	public AnyState AnyState(string name, Condition switchCondition, EnterState enter = null, UpdateState update = null, ExitState exit = null) {
 		return stateMachine.AnyState(name, switchCondition, enter, update, exit);
 	}
 	
@@ -64,32 +81,52 @@ public class State {
 		return stateMachine.GetState(name);
 	}
 	
-	public State Update() {
+	virtual public State Update(State overrideExit = null) {
 		if(firstUpdate) {
-			if(enter != null) {
-				enter();
-			}
-			
-			firstUpdate = false;
+			Enter();
 		}
 		
 		if(update != null) {
 			update();
 		}
 		
+		if(overrideExit != null) {
+			Exit();
+			return overrideExit;
+		}
+		
 		for(int i = 0; i < outputStates.Count; ++ i) {
 			if(outputStates[i].condition()) {
-				firstUpdate = true;
-				
-				if(exit != null) {
-					exit();
-				}
-				
+				Exit();
 				return outputStates[i].toState;
 			}
 		}
 		
 		return null;
+	}
+	
+}
+
+public class AnyState : State {
+	
+	public State PreviousState {
+		set {
+			outputStates[0].toState = value;
+		}
+	}
+	
+	// -- //
+	
+	public AnyState(StateMachine stateMachine, string name, EnterState enter, UpdateState update, ExitState exit)
+		: base(stateMachine, name, enter, update, exit)
+	{  }
+	
+	public AnyState Exit(Condition exitCondition) {
+		// TODO si Exit est appelé plus d'une fois, il faudrait remplacer la condition déjà présente
+		
+		// In Update, the first condition to test will be the exit condition
+		outputStates.Insert(0, new StateOutput() { condition = exitCondition });
+		return this;
 	}
 	
 }
@@ -114,11 +151,11 @@ public class StateMachine {
 		return newState;
 	}
 	
-	public State AnyState(string name, Condition switchCondition, EnterState enter = null, UpdateState update = null, ExitState exit = null) {
-		State stateToAdd = GetState(name);
+	public AnyState AnyState(string name, Condition switchCondition, EnterState enter = null, UpdateState update = null, ExitState exit = null) {
+		AnyState stateToAdd = GetState(name) as AnyState;
 		
 		if(stateToAdd == null) {
-			stateToAdd = AddState(name, enter, update, exit);
+			stateToAdd = new AnyState(this, name, enter, update, exit);
 		}
 		
 		StateOutput output = new StateOutput();
@@ -126,6 +163,7 @@ public class StateMachine {
 		output.toState     = stateToAdd;
 		
 		anyStates.Add(output);
+		states.Add(name, stateToAdd);
 		
 		return stateToAdd;
 	}
@@ -141,9 +179,17 @@ public class StateMachine {
 	}
 	
 	public void Update() {
-		// TODO check les Any States
+		State maybeNewState;
+		AnyState maybeAnyState = null; 
 		
-		State maybeNewState = currentState.Update();
+		for(int i = 0; i < anyStates.Count; ++ i) {
+			if(anyStates[i].condition()) {
+				maybeAnyState = anyStates[i].toState as AnyState; 
+				maybeAnyState.PreviousState = currentState;
+			}
+		}
+		
+		maybeNewState = currentState.Update(maybeAnyState);
 		
 		if(maybeNewState != null) {
 			currentState = maybeNewState;

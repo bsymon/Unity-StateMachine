@@ -15,8 +15,9 @@ public class TestCase : MonoBehaviour {
 		stateMachine.AddState("Idle")
 			.To("Jumping", () => Input.GetKeyDown(KeyCode.Space), Jumping_Enter, Jumping_Update, Jumping_Exit)
 		.To("Idle", () => Input.GetKeyUp(KeyCode.Space))
-			.To("Crouching", () => Input.GetKeyDown(KeyCode.DownArrow), Crouching_Enter, Crouching_Update, Crouching_Exit)
-		.To("Idle", () => Input.GetKeyUp(KeyCode.DownArrow));
+			.To("Crouching", () => Input.GetKey(KeyCode.DownArrow), Crouching_Enter, Crouching_Update, Crouching_Exit)
+		.To("Idle", () => !Input.GetKey(KeyCode.DownArrow))
+		.AnyState("Shooting", () => Input.GetKeyDown(KeyCode.A), Enter_Shooting, Update_Shooting, Exit_Shooting).Exit(() => Input.GetKeyUp(KeyCode.A))
 		;
 	}
 	
@@ -64,6 +65,20 @@ public class TestCase : MonoBehaviour {
 	
 	void Crouching_Exit() {
 		Debug.Log("Enough chill");
+	}
+	
+	// -- //
+	
+	void Enter_Shooting() {
+		Debug.Log("Enter Shooting");
+	}
+	
+	void Update_Shooting() {
+		Debug.Log("Update Shooting");
+	}
+	
+	void Exit_Shooting() {
+		Debug.Log("Exit Shooting");
 	}
 	
 }
