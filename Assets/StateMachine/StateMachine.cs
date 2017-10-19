@@ -34,10 +34,12 @@ public class State {
 	// -- //
 	
 	protected void Enter() {
-		firstUpdate = false;
-		
-		if(enter != null) {
-			enter();
+		if(firstUpdate) {
+			firstUpdate = false;
+			
+			if(enter != null) {
+				enter();
+			}
 		}
 	}
 	
@@ -91,9 +93,7 @@ public class State {
 	}
 	
 	public State Update(State overrideExit = null) {
-		if(firstUpdate) {
-			Enter();
-		}
+		Enter();
 		
 		if(update != null) {
 			update();
@@ -115,6 +115,8 @@ public class State {
 	}
 	
 	public void FixedUpdate() {
+		Enter();
+		
 		if(fixedUpdate != null) {
 			fixedUpdate();
 		}
