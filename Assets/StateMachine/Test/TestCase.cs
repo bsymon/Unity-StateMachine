@@ -12,17 +12,21 @@ public class TestCase : MonoBehaviour {
 	// -- //
 	
 	void Awake() {
-		stateMachine.AddState("Idle")
-			.To("Jumping", () => Input.GetKeyDown(KeyCode.Space), Jumping_Enter, Jumping_Update, Jumping_Exit)
+		stateMachine.AddState("Idle", fixedUpdate: Idle_FixedUpdate)
+			.To("Jumping", () => Input.GetKeyDown(KeyCode.Space), enter: Jumping_Enter, update: Jumping_Update, exit: Jumping_Exit)
 		.To("Idle", () => Input.GetKeyUp(KeyCode.Space))
-			.To("Crouching", () => Input.GetKey(KeyCode.DownArrow), Crouching_Enter, Crouching_Update, Crouching_Exit)
+			.To("Crouching", () => Input.GetKey(KeyCode.DownArrow), enter: Crouching_Enter, update: Crouching_Update, exit: Crouching_Exit)
 		.To("Idle", () => !Input.GetKey(KeyCode.DownArrow))
-		.AnyState("Shooting", () => Input.GetKeyDown(KeyCode.A), Enter_Shooting, Update_Shooting, Exit_Shooting).Exit(() => Input.GetKeyUp(KeyCode.A))
+		.AnyState("Shooting", () => Input.GetKeyDown(KeyCode.A), enter: Enter_Shooting, update: Update_Shooting, exit: Exit_Shooting).Exit(() => Input.GetKeyUp(KeyCode.A))
 		;
 	}
 	
 	void Update() {
 		stateMachine.Update();
+	}
+	
+	void FixedUpdate() {
+		stateMachine.FixedUpdate();
 	}
 	
 	// -- //
@@ -33,6 +37,10 @@ public class TestCase : MonoBehaviour {
 	
 	void Idle_Update() {
 		Debug.Log("I'm idling :)");
+	}
+	
+	void Idle_FixedUpdate() {
+		Debug.Log("Fixed idling");
 	}
 	
 	void Idle_Exit() {

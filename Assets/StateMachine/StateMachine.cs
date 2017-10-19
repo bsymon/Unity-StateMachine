@@ -7,6 +7,7 @@ namespace Game.Tools {
 public delegate bool Condition();
 public delegate void EnterState();
 public delegate void UpdateState();
+public delegate void FixedUpdateState();
 public delegate void ExitState();
 
 public class StateOutput {
@@ -23,6 +24,7 @@ public class State {
 	
 	protected EnterState enter;
 	protected UpdateState update;
+	protected FixedUpdateState fixedUpdate;
 	protected ExitState exit;
 	
 	protected List<StateOutput> outputStates = new List<StateOutput>();
@@ -49,19 +51,23 @@ public class State {
 	
 	// -- //
 	
-	public State(StateMachine stateMachine, string name, EnterState enter, UpdateState update, ExitState exit) {
+	public State(StateMachine stateMachine, string name, EnterState enter, UpdateState update, FixedUpdateState fixedUpdate, ExitState exit) {
 		this.stateMachine = stateMachine;
-		this.name   = name;
-		this.enter  = enter;
-		this.update = update;
-		this.exit   = exit;
+		this.name        = name;
+		this.enter       = enter;
+		this.update      = update;
+		this.fixedUpdate = fixedUpdate;
+		this.exit        = exit;
 	}
 	
-	public State To(string name, Condition switchCondition, EnterState enter = null, UpdateState update = null, ExitState exit = null) {
+	public State To(string name, Condition switchCondition,
+		EnterState enter = null, UpdateState update = null,
+		FixedUpdateState fixedUpdate = null, ExitState exit = null
+	) {
 		State stateToAdd = stateMachine.GetState(name);
 		
 		if(stateToAdd == null) {
-			stateToAdd = stateMachine.AddState(name, enter, update, exit);
+			stateToAdd = stateMachine.AddState(name, enter, update, fixedUpdate, exit);
 		}
 		
 		StateOutput output = new StateOutput();
@@ -73,15 +79,18 @@ public class State {
 		return output.toState;
 	}
 	
-	public AnyState AnyState(string name, Condition switchCondition, EnterState enter = null, UpdateState update = null, ExitState exit = null) {
-		return stateMachine.AnyState(name, switchCondition, enter, update, exit);
+	public AnyState AnyState(string name, Condition switchCondition,
+		EnterState enter = null, UpdateState update = null,
+		FixedUpdateState fixedUpdate = null, ExitState exit = null
+	) {
+		return stateMachine.AnyState(name, switchCondition, enter, update, fixedUpdate, exit);
 	}
 	
 	public State GoTo(string name) {
 		return stateMachine.GetState(name);
 	}
 	
-	virtual public State Update(State overrideExit = null) {
+	public State Update(State overrideExit = null) {
 		if(firstUpdate) {
 			Enter();
 		}
@@ -105,6 +114,12 @@ public class State {
 		return null;
 	}
 	
+	public void FixedUpdate() {
+		if(fixedUpdate != null) {
+			fixedUpdate();
+		}
+	}
+	
 }
 
 public class AnyState : State {
@@ -117,8 +132,8 @@ public class AnyState : State {
 	
 	// -- //
 	
-	public AnyState(StateMachine stateMachine, string name, EnterState enter, UpdateState update, ExitState exit)
-		: base(stateMachine, name, enter, update, exit)
+	public AnyState(StateMachine stateMachine, string name, EnterState enter, UpdateState update, FixedUpdateState fixedUpdate, ExitState exit)
+		: base(stateMachine, name, enter, update, fixedUpdate, exit)
 	{  }
 	
 	public AnyState Exit(Condition exitCondition) {
@@ -139,8 +154,11 @@ public class StateMachine {
 	
 	// -- //
 	
-	public State AddState(string name, EnterState enter = null, UpdateState update = null, ExitState exit = null) {
-		State newState = new State(this, name, enter, update, exit);
+	public State AddState(string name, EnterState enter = null,
+			UpdateState update = null, FixedUpdateState fixedUpdate = null,
+			ExitState exit = null
+	) {
+		State newState = new State(this, name, enter, update, fixedUpdate, exit);
 		
 		if(currentState == null) {
 			currentState = newState;
@@ -151,11 +169,14 @@ public class StateMachine {
 		return newState;
 	}
 	
-	public AnyState AnyState(string name, Condition switchCondition, EnterState enter = null, UpdateState update = null, ExitState exit = null) {
+	public AnyState AnyState(string name, Condition switchCondition,
+			EnterState enter = null, UpdateState update = null,
+			FixedUpdateState fixedUpdate = null, ExitState exit = null
+	) {
 		AnyState stateToAdd = GetState(name) as AnyState;
 		
 		if(stateToAdd == null) {
-			stateToAdd = new AnyState(this, name, enter, update, exit);
+			stateToAdd = new AnyState(this, name, enter, update, fixedUpdate, exit);
 		}
 		
 		StateOutput output = new StateOutput();
@@ -194,6 +215,10 @@ public class StateMachine {
 		if(maybeNewState != null) {
 			currentState = maybeNewState;
 		}
+	}
+	
+	public void FixedUpdate() {
+		currentState.FixedUpdate();
 	}
 	
 }
