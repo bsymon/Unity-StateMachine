@@ -19,6 +19,12 @@ public class StateOutput {
 
 public class State {
 	
+	public string Name {
+		get { return name; }
+	}
+	
+	// -- //
+	
 	string name;
 	StateMachine stateMachine;
 	
@@ -115,9 +121,8 @@ public class State {
 	}
 	
 	public void FixedUpdate() {
-		Enter();
-		
 		if(fixedUpdate != null) {
+			Enter();
 			fixedUpdate();
 		}
 	}
@@ -126,11 +131,7 @@ public class State {
 
 public class AnyState : State {
 	
-	public State PreviousState {
-		set {
-			outputStates[0].toState = value;
-		}
-	}
+	bool hasExit;
 	
 	// -- //
 	
@@ -142,13 +143,26 @@ public class AnyState : State {
 		// TODO si Exit est appelé plus d'une fois, il faudrait remplacer la condition déjà présente
 		
 		// In Update, the first condition to test will be the exit condition
+		hasExit = true;
 		outputStates.Insert(0, new StateOutput() { condition = exitCondition });
 		return this;
+	}
+	
+	public void SetPreviousState(State previousState) {
+		if(hasExit) {
+			outputStates[0].toState = previousState;
+		}
 	}
 	
 }
 
 public class StateMachine {
+	
+	public State CurrentState {
+		get { return currentState; }
+	}
+	
+	// -- //
 	
 	State currentState;
 	Dictionary<string, State> states = new Dictionary<string, State>();
@@ -203,12 +217,13 @@ public class StateMachine {
 	
 	public void Update() {
 		State maybeNewState;
-		AnyState maybeAnyState = null; 
+		AnyState maybeAnyState = null;
 		
 		for(int i = 0; i < anyStates.Count; ++ i) {
-			if(anyStates[i].condition()) {
-				maybeAnyState = anyStates[i].toState as AnyState; 
-				maybeAnyState.PreviousState = currentState;
+			StateOutput output = anyStates[i];
+			if(output.toState != currentState && output.condition()) {
+				maybeAnyState = output.toState as AnyState; 
+				maybeAnyState.SetPreviousState(currentState);
 			}
 		}
 		
